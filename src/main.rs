@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use dioxus::LaunchBuilder;
 use dioxus_desktop::{Config, LogicalSize, WindowBuilder};
+use dioxus_motion::prelude::*;
 use std::time::Duration;
 
 fn main() {
@@ -20,10 +21,10 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    // State: which reminder is active
     let mut blink_active = use_signal(|| false);
     let mut posture_active = use_signal(|| false);
 
+    // Blink timer (every 30s)
     use_future(move || async move {
         loop {
             tokio::time::sleep(Duration::from_secs(5)).await;
@@ -46,17 +47,75 @@ fn App() -> Element {
         div {
             style: "width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.0);",
             if posture_active() {
-                svg { width: "120", height: "120", view_box: "0 0 120 120", xmlns: "http://www.w3.org/2000/svg",
-                    circle { cx: "60", cy: "60", r: "55", fill: "#e0f7fa", stroke: "#00796b", stroke_width: "5" }
-                    text { x: "60", y: "70", text_anchor: "middle", font_size: "22", fill: "#00796b", font_family: "Arial", "Posture!" }
-                }
+                AnimatedPosture {}
             } else if blink_active() {
-                svg { width: "120", height: "120", view_box: "0 0 120 120", xmlns: "http://www.w3.org/2000/svg",
-                    ellipse { cx: "60", cy: "60", rx: "50", ry: "30", fill: "#fffde7", stroke: "#fbc02d", stroke_width: "5" }
-                    circle { cx: "60", cy: "60", r: "12", fill: "#1976d2" }
-                    rect { x: "10", y: "30", width: "100", height: "60", fill: "#fffde7", opacity: "0.3" }
-                }
+                AnimatedBlink {}
             }
+        }
+    }
+}
+
+#[component]
+fn AnimatedBlink() -> Element {
+    // Pulse scale animation
+    let mut scale = use_motion(1.0f32);
+    use_effect(move || {
+        scale.animate_to(
+            1.18,
+            AnimationConfig::new(AnimationMode::Spring(Spring {
+                stiffness: 120.0,
+                damping: 7.0,
+                mass: 0.5,
+                velocity: 1.0,
+            }))
+            .with_loop(LoopMode::Infinite),
+        );
+    });
+    rsx! {
+        svg {
+            width: "120", height: "120", view_box: "0 0 120 120", xmlns: "http://www.w3.org/2000/svg",
+            style: "background: none; display: block; transform: scale({scale.get_value()}); transition: transform 0.2s;",
+            // Eye outline
+            path { d: "M10 60 Q60 10 110 60 Q60 110 10 60 Z", fill: "none", stroke: "#1976d2", stroke_width: "6" }
+            // Iris
+            circle { cx: "60", cy: "60", r: "16", fill: "#1976d2", opacity: "0.85" }
+            // Pupil
+            circle { cx: "60", cy: "60", r: "7", fill: "#fff" }
+        }
+    }
+}
+
+#[component]
+fn AnimatedPosture() -> Element {
+    // Gentle bounce animation
+    let mut translate = use_motion(0.0f32);
+    use_effect(move || {
+        translate.animate_to(
+            -10.0,
+            AnimationConfig::new(AnimationMode::Spring(Spring {
+                stiffness: 80.0,
+                damping: 8.0,
+                mass: 0.7,
+                velocity: 1.0,
+            }))
+            .with_loop(LoopMode::Infinite),
+        );
+    });
+    rsx! {
+        svg {
+            width: "120", height: "120", view_box: "0 0 120 120", xmlns: "http://www.w3.org/2000/svg",
+            style: "background: none; display: block; transform: translateY({translate.get_value()}px); transition: transform 0.2s;",
+            // Stylized posture icon: a person sitting upright
+            // Head
+            circle { cx: "60", cy: "38", r: "13", fill: "#00796b", opacity: "0.85" }
+            // Body
+            rect { x: "54", y: "51", width: "12", height: "32", rx: "6", fill: "#00796b", opacity: "0.85" }
+            // Legs
+            rect { x: "54", y: "83", width: "5", height: "20", rx: "2.5", fill: "#00796b", opacity: "0.85" }
+            rect { x: "61", y: "83", width: "5", height: "20", rx: "2.5", fill: "#00796b", opacity: "0.85" }
+            // Arms
+            rect { x: "44", y: "55", width: "8", height: "22", rx: "4", fill: "#00796b", opacity: "0.7", transform: "rotate(-18 48 66)" }
+            rect { x: "68", y: "55", width: "8", height: "22", rx: "4", fill: "#00796b", opacity: "0.7", transform: "rotate(18 72 66)" }
         }
     }
 }
