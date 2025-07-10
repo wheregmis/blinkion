@@ -10,6 +10,7 @@ use dioxus::desktop::{trayicon::init_tray_icon, window, WindowCloseBehaviour};
 use dioxus::desktop::{use_window, Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
 use dioxus_desktop::muda::{Menu, MenuItem};
+use dioxus_desktop::use_muda_event_handler;
 use dioxus_motion::prelude::*;
 use std::time::Duration;
 
@@ -17,6 +18,12 @@ use std::time::Duration;
 enum ReminderType {
     Blink,
 }
+
+// Global signals for blink interval and duration
+static BLINK_INTERVAL: GlobalSignal<u64> = GlobalSignal::new(|| 30);
+static BLINK_DURATION: GlobalSignal<u64> = GlobalSignal::new(|| 3);
+// Global signal to control showing the reminder window
+static SHOW_WINDOW: GlobalSignal<bool> = GlobalSignal::new(|| false);
 
 fn main() {
     dioxus::LaunchBuilder::new()
@@ -35,38 +42,69 @@ fn main() {
 }
 
 fn app() -> Element {
-    use_hook(|| {
-        window().set_close_behavior(WindowCloseBehaviour::WindowHides);
-        // Create a tray menu with a Settings item
-        let tray_menu = Menu::new();
-        let _ = tray_menu.append(&MenuItem::new("settings", true, None));
-        init_tray_icon(tray_menu, None);
-    });
+    // Listen for tray menu events
 
-    // Blink reminder every 30s
-    use_future(|| async move {
-        loop {
-            tokio::time::sleep(Duration::from_secs(5)).await;
+    window().set_close_behavior(WindowCloseBehaviour::WindowHides);
+    // Create a tray menu with a Settings item
+    let tray_menu = Menu::new();
+    let menu_item = MenuItem::new("settings", true, None);
+    let menu_item_id = menu_item.id().clone();
+    let _ = tray_menu.append(&menu_item);
+
+    init_tray_icon(tray_menu, None);
+
+    use_muda_event_handler(move |event| {
+        if *event.id() == menu_item_id {
+            println!("Settings");
             window().new_window(
-                VirtualDom::new_with_props(
-                    ReminderWindow,
-                    ReminderWindowProps {
-                        kind: ReminderType::Blink,
-                    },
-                ),
+                VirtualDom::new(SettingsWindow),
                 Config::default().with_window(
                     WindowBuilder::new()
-                        .with_title("Blinkion")
-                        .with_transparent(true)
+                        .with_title("Blinkion Settings")
+                        .with_transparent(false)
                         .with_always_on_top(true)
-                        .with_decorations(false)
-                        .with_inner_size(LogicalSize::new(220.0, 180.0)),
+                        .with_decorations(true)
+                        .with_inner_size(LogicalSize::new(360.0, 260.0)),
                 ),
             );
         }
     });
 
-    // No visible UI
+    // Timer: set SHOW_WINDOW to true every blink_interval seconds
+    use_future(|| async move {
+        loop {
+            let interval = *BLINK_INTERVAL.read();
+            tokio::time::sleep(Duration::from_secs(interval)).await;
+            *SHOW_WINDOW.write() = true;
+        }
+    });
+
+    // Poll SHOW_WINDOW every 100ms, show window if true, then reset
+    use_future(|| async move {
+        loop {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            if *SHOW_WINDOW.read() {
+                window().new_window(
+                    VirtualDom::new_with_props(
+                        ReminderWindow,
+                        ReminderWindowProps {
+                            kind: ReminderType::Blink,
+                        },
+                    ),
+                    Config::default().with_window(
+                        WindowBuilder::new()
+                            .with_title("Blinkion")
+                            .with_transparent(true)
+                            .with_always_on_top(true)
+                            .with_decorations(false)
+                            .with_inner_size(LogicalSize::new(220.0, 180.0)),
+                    ),
+                );
+                *SHOW_WINDOW.write() = false;
+            }
+        }
+    });
+
     rsx!()
 }
 
@@ -76,8 +114,9 @@ fn ReminderWindow(kind: ReminderType) -> Element {
     use_future(move || {
         let win = win.clone();
         async move {
-            // Wait 3 seconds before closing
-            tokio::time::sleep(Duration::from_secs(3)).await;
+            // Use global blink duration
+            let duration = *BLINK_DURATION.read();
+            tokio::time::sleep(Duration::from_secs(duration)).await;
             win.close();
         }
     });
@@ -86,6 +125,51 @@ fn ReminderWindow(kind: ReminderType) -> Element {
             style: "width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.0);",
             match kind {
                 ReminderType::Blink => rsx! { AnimatedBlink {} },
+            }
+        }
+    }
+}
+
+#[component]
+fn SettingsWindow() -> Element {
+    let mut blink_interval = use_signal(|| *BLINK_INTERVAL.read());
+    let mut blink_duration = use_signal(|| *BLINK_DURATION.read());
+
+    rsx! {
+        div {
+            style: "width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: white; color: black;",
+            div {
+                style: "padding: 32px; border-radius: 12px; min-width: 300px; min-height: 200px; box-shadow: 0 2px 16px rgba(0,0,0,0.2);",
+                h2 { style: "font-size: 2rem; font-weight: bold;", "Blinkion Settings" }
+                div { style: "margin-top: 24px;",
+                    label { style: "display: block; margin-bottom: 8px;", "Blink interval (seconds):" }
+                    input {
+                        r#type: "number",
+                        min: "1",
+                        value: "{blink_interval}",
+                        oninput: move |e| if let Ok(val) = e.value().parse() { blink_interval.set(val) },
+                        style: "width: 80px; margin-bottom: 16px;"
+                    }
+                }
+                div {
+                    label { style: "display: block; margin-bottom: 8px;", "Blink duration (seconds):" }
+                    input {
+                        r#type: "number",
+                        min: "1",
+                        value: "{blink_duration}",
+                        oninput: move |e| if let Ok(val) = e.value().parse() { blink_duration.set(val) },
+                        style: "width: 80px; margin-bottom: 16px;"
+                    }
+                }
+                button {
+                    style: "margin-top: 24px; padding: 8px 24px; border-radius: 6px; background: #1976d2; color: white; border: none; font-size: 1rem; cursor: pointer;",
+                    onclick: move |_| {
+                        *BLINK_INTERVAL.write() = *blink_interval.read();
+                        *BLINK_DURATION.write() = *blink_duration.read();
+                        println!("Saved: interval={} duration={}", blink_interval(), blink_duration());
+                    },
+                    "Save"
+                }
             }
         }
     }
