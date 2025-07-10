@@ -12,6 +12,7 @@ use dioxus::desktop::{
 };
 use dioxus::desktop::{use_window, Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
+use dioxus_motion::prelude::*;
 use std::time::Duration;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -91,11 +92,80 @@ fn ReminderWindow(kind: ReminderType) -> Element {
 
 #[component]
 fn AnimatedBlink() -> Element {
-    // Pulse scale animation (replace with your dioxus-motion code if needed)
+    // Animate the vertical scale for a blink effect
+    let mut scale_y = use_motion(1.0f32);
+
+    use_effect(move || {
+        // Animate to closed (scaleY=0.1), then open (scaleY=1.0), repeat 3 times by chaining .then
+        let sequence = AnimationSequence::new()
+            .then(
+                0.1,
+                AnimationConfig::new(AnimationMode::Spring(Spring {
+                    stiffness: 300.0,
+                    damping: 15.0,
+                    mass: 1.0,
+                    velocity: 0.0,
+                })),
+            )
+            .then(
+                1.0,
+                AnimationConfig::new(AnimationMode::Spring(Spring {
+                    stiffness: 200.0,
+                    damping: 10.0,
+                    mass: 1.0,
+                    velocity: 0.0,
+                })),
+            )
+            // 2nd blink
+            .then(
+                0.1,
+                AnimationConfig::new(AnimationMode::Spring(Spring {
+                    stiffness: 300.0,
+                    damping: 15.0,
+                    mass: 1.0,
+                    velocity: 0.0,
+                })),
+            )
+            .then(
+                1.0,
+                AnimationConfig::new(AnimationMode::Spring(Spring {
+                    stiffness: 200.0,
+                    damping: 10.0,
+                    mass: 1.0,
+                    velocity: 0.0,
+                })),
+            )
+            // 3rd blink
+            .then(
+                0.1,
+                AnimationConfig::new(AnimationMode::Spring(Spring {
+                    stiffness: 300.0,
+                    damping: 15.0,
+                    mass: 1.0,
+                    velocity: 0.0,
+                })),
+            )
+            .then(
+                1.0,
+                AnimationConfig::new(AnimationMode::Spring(Spring {
+                    stiffness: 200.0,
+                    damping: 10.0,
+                    mass: 1.0,
+                    velocity: 0.0,
+                })),
+            );
+        scale_y.animate_sequence(sequence);
+    });
+
+    let style = format!(
+        "transform: scaleY({}); transition: transform 0.2s cubic-bezier(.4,2,.6,1); background: none; display: block;",
+        scale_y.get_value()
+    );
+
     rsx! {
         svg {
             width: "120", height: "120", view_box: "0 0 120 120", xmlns: "http://www.w3.org/2000/svg",
-            style: "background: none; display: block;",
+            style: "{style}",
             // Eye outline
             path { d: "M10 60 Q60 10 110 60 Q60 110 10 60 Z", fill: "none", stroke: "#1976d2", stroke_width: "6" }
             // Iris
