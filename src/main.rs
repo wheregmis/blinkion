@@ -6,12 +6,10 @@
 //!
 //! This is useful for apps that incorporate settings panels or persistent windows like Raycast.
 
-use dioxus::desktop::{
-    trayicon::{default_tray_icon, init_tray_icon},
-    window, WindowCloseBehaviour,
-};
+use dioxus::desktop::{trayicon::init_tray_icon, window, WindowCloseBehaviour};
 use dioxus::desktop::{use_window, Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
+use dioxus_desktop::muda::{Menu, MenuItem};
 use dioxus_motion::prelude::*;
 use std::time::Duration;
 
@@ -39,7 +37,10 @@ fn main() {
 fn app() -> Element {
     use_hook(|| {
         window().set_close_behavior(WindowCloseBehaviour::WindowHides);
-        init_tray_icon(default_tray_icon(), None)
+        // Create a tray menu with a Settings item
+        let tray_menu = Menu::new();
+        let _ = tray_menu.append(&MenuItem::new("settings", true, None));
+        init_tray_icon(tray_menu, None);
     });
 
     // Blink reminder every 30s
