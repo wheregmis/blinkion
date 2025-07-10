@@ -10,35 +10,91 @@ use dioxus::desktop::{
     trayicon::{default_tray_icon, init_tray_icon},
     window, WindowCloseBehaviour,
 };
+use dioxus::desktop::{use_window, Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
+use std::time::Duration;
+
+#[derive(Clone, Copy, PartialEq)]
+enum ReminderType {
+    Blink,
+}
 
 fn main() {
-    dioxus::launch(app);
+    dioxus::LaunchBuilder::new()
+        .with_cfg(
+            Config::default().with_window(
+                WindowBuilder::new()
+                    .with_title("Blinkion")
+                    .with_transparent(true)
+                    .with_always_on_top(true)
+                    .with_decorations(false)
+                    .with_inner_size(LogicalSize::new(1.0, 1.0))
+                    .with_visible(true),
+            ),
+        )
+        .launch(app);
 }
 
 fn app() -> Element {
     use_hook(|| {
-        // Set the close behavior for the main window
-        // This will hide the window instead of closing it when the user clicks the close button
         window().set_close_behavior(WindowCloseBehaviour::WindowHides);
-
-        // Initialize the tray icon with a default icon and no menu
-        // This will provide the tray into context for the application
         init_tray_icon(default_tray_icon(), None)
     });
 
+    // Blink reminder every 30s
+    use_future(|| async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            window().new_window(
+                VirtualDom::new_with_props(
+                    ReminderWindow,
+                    ReminderWindowProps {
+                        kind: ReminderType::Blink,
+                    },
+                ),
+                Default::default(),
+            );
+        }
+    });
+
+    // No visible UI
+    rsx!()
+}
+
+#[component]
+fn ReminderWindow(kind: ReminderType) -> Element {
+    let win = use_window();
+    use_future(move || {
+        let win = win.clone();
+        async move {
+            // Wait 3 seconds before closing
+            tokio::time::sleep(Duration::from_secs(3)).await;
+            win.close();
+        }
+    });
     rsx! {
-        button {
-            onclick: move |_| {
-                window().new_window(VirtualDom::new(popup), Default::default());
-            },
-            "New Window"
+        div {
+            style: "width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.0);",
+            match kind {
+                ReminderType::Blink => rsx! { AnimatedBlink {} },
+            }
         }
     }
 }
 
-fn popup() -> Element {
+#[component]
+fn AnimatedBlink() -> Element {
+    // Pulse scale animation (replace with your dioxus-motion code if needed)
     rsx! {
-        div { "This is a popup window!" }
+        svg {
+            width: "120", height: "120", view_box: "0 0 120 120", xmlns: "http://www.w3.org/2000/svg",
+            style: "background: none; display: block;",
+            // Eye outline
+            path { d: "M10 60 Q60 10 110 60 Q60 110 10 60 Z", fill: "none", stroke: "#1976d2", stroke_width: "6" }
+            // Iris
+            circle { cx: "60", cy: "60", r: "16", fill: "#1976d2", opacity: "0.85" }
+            // Pupil
+            circle { cx: "60", cy: "60", r: "7", fill: "#fff" }
+        }
     }
 }
