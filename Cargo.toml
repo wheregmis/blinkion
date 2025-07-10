@@ -1,0 +1,18 @@
+[package]
+name = "blinkion"
+version = "0.1.0"
+authors = ["Sabin Regmi <get2sabin@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dioxus = { version = "0.7.0-alpha.2", features = [] }
+dioxus-desktop = "0.7.0-alpha.2"
+tokio = { version = "1.46.1", features = ["full"] }
+
+[features]
+default = ["desktop"]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
