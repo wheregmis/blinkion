@@ -52,7 +52,14 @@ fn app() -> Element {
                         kind: ReminderType::Blink,
                     },
                 ),
-                Default::default(),
+                Config::default().with_window(
+                    WindowBuilder::new()
+                        .with_title("Blinkion")
+                        .with_transparent(true)
+                        .with_always_on_top(true)
+                        .with_decorations(false)
+                        .with_inner_size(LogicalSize::new(220.0, 180.0)),
+                ),
             );
         }
     });
