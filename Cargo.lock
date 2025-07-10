@@ -156,6 +156,9 @@ dependencies = [
  "dioxus",
  "dioxus-desktop",
  "dioxus-motion",
+ "futures-channel",
+ "futures-util",
+ "once_cell",
  "tokio",
 ]
 
