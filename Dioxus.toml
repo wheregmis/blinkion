@@ -1,5 +1,10 @@
 [application]
 
+[bundle]
+identifier = "com.wheregmis.blinkion"
+publisher = "wheregmis"
+icon = ["assets/icon.png"]
+
 [web.app]
 
 # HTML title tag content

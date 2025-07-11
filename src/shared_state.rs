@@ -1,12 +1,14 @@
-use futures_channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 use once_cell::sync::Lazy;
 use std::sync::{Arc, RwLock};
+use tokio::sync::broadcast;
 
 /// The shared application state for blink settings.
 #[derive(Debug, Clone)]
 pub struct BlinkSettings {
     pub blink_interval: u64,
     pub blink_duration: u64,
+    pub posture_interval: u64,
+    pub posture_duration: u64,
 }
 
 impl Default for BlinkSettings {
@@ -14,6 +16,8 @@ impl Default for BlinkSettings {
         Self {
             blink_interval: 30,
             blink_duration: 3,
+            posture_interval: 60,
+            posture_duration: 5,
         }
     }
 }
@@ -22,13 +26,11 @@ impl Default for BlinkSettings {
 pub static SHARED_BLINK_SETTINGS: Lazy<Arc<RwLock<BlinkSettings>>> =
     Lazy::new(|| Arc::new(RwLock::new(BlinkSettings::default())));
 
-/// Channel for broadcasting settings changes
-pub static SETTINGS_CHANNEL: Lazy<(
-    UnboundedSender<BlinkSettings>,
-    Arc<RwLock<UnboundedReceiver<BlinkSettings>>>,
-)> = Lazy::new(|| {
-    let (tx, rx) = unbounded();
-    (tx, Arc::new(RwLock::new(rx)))
+/// Broadcast channel for settings changes (tokio broadcast)
+pub static SETTINGS_CHANNEL: Lazy<broadcast::Sender<BlinkSettings>> = Lazy::new(|| {
+    // 16 is the channel buffer size; adjust as needed
+    let (tx, _) = broadcast::channel(16);
+    tx
 });
 
 /// Helper functions for reading and writing the shared state.
@@ -38,13 +40,28 @@ pub fn get_blink_interval() -> u64 {
     SHARED_BLINK_SETTINGS.read().unwrap().blink_interval
 }
 
+/// Get the current posture interval.
+pub fn get_posture_interval() -> u64 {
+    SHARED_BLINK_SETTINGS.read().unwrap().posture_interval
+}
+
 /// Set the blink interval and broadcast the change.
 pub fn set_blink_interval(val: u64) {
     {
         let mut state = SHARED_BLINK_SETTINGS.write().unwrap();
         state.blink_interval = val;
         // Broadcast the new state
-        let _ = SETTINGS_CHANNEL.0.unbounded_send(state.clone());
+        let _ = SETTINGS_CHANNEL.send(state.clone());
+    }
+}
+
+/// Set the posture interval and broadcast the change.
+pub fn set_posture_interval(val: u64) {
+    {
+        let mut state = SHARED_BLINK_SETTINGS.write().unwrap();
+        state.posture_interval = val;
+        // Broadcast the new state
+        let _ = SETTINGS_CHANNEL.send(state.clone());
     }
 }
 
@@ -53,17 +70,32 @@ pub fn get_blink_duration() -> u64 {
     SHARED_BLINK_SETTINGS.read().unwrap().blink_duration
 }
 
+/// Get the current posture duration.
+pub fn get_posture_duration() -> u64 {
+    SHARED_BLINK_SETTINGS.read().unwrap().posture_duration
+}
+
 /// Set the blink duration and broadcast the change.
 pub fn set_blink_duration(val: u64) {
     {
         let mut state = SHARED_BLINK_SETTINGS.write().unwrap();
         state.blink_duration = val;
         // Broadcast the new state
-        let _ = SETTINGS_CHANNEL.0.unbounded_send(state.clone());
+        let _ = SETTINGS_CHANNEL.send(state.clone());
     }
 }
 
-/// Listen for settings changes (returns a receiver)
-pub fn settings_receiver() -> Arc<RwLock<UnboundedReceiver<BlinkSettings>>> {
-    SETTINGS_CHANNEL.1.clone()
+/// Set the posture duration and broadcast the change.
+pub fn set_posture_duration(val: u64) {
+    {
+        let mut state = SHARED_BLINK_SETTINGS.write().unwrap();
+        state.posture_duration = val;
+        // Broadcast the new state
+        let _ = SETTINGS_CHANNEL.send(state.clone());
+    }
+}
+
+/// Listen for settings changes (returns a new broadcast receiver)
+pub fn settings_receiver() -> broadcast::Receiver<BlinkSettings> {
+    SETTINGS_CHANNEL.subscribe()
 }

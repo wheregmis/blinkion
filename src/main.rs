@@ -10,6 +10,7 @@ use dioxus::desktop::{trayicon::init_tray_icon, window, WindowCloseBehaviour};
 use dioxus::desktop::{Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
 use dioxus_desktop::muda::{Menu, MenuItem};
+use dioxus_desktop::trayicon::DioxusTrayIcon;
 use dioxus_desktop::use_muda_event_handler;
 use std::time::Duration;
 
@@ -18,6 +19,9 @@ mod reminder;
 mod shared_state;
 mod signals;
 
+use crate::shared_state::{
+    get_blink_interval, get_posture_duration, get_posture_interval, settings_receiver,
+};
 use components::reminder_window::{ReminderWindow, ReminderWindowProps};
 use components::settings_window::SettingsWindow;
 use reminder::ReminderType;
@@ -47,15 +51,17 @@ fn app() -> Element {
     window().set_close_behavior(WindowCloseBehaviour::WindowHides);
     // Create a tray menu with a Settings item
     let tray_menu = Menu::new();
-    let menu_item = MenuItem::new("settings", true, None);
+    let menu_item = MenuItem::new("Settings", true, None);
     let menu_item_id = menu_item.id().clone();
     let _ = tray_menu.append(&menu_item);
 
-    init_tray_icon(tray_menu, None);
+    init_tray_icon(
+        tray_menu,
+        DioxusTrayIcon::from_rgba(include_bytes!(".././assets/icon.png").to_vec(), 460, 460).ok(),
+    );
 
     use_muda_event_handler(move |event| {
         if *event.id() == menu_item_id {
-            println!("Settings");
             window().new_window(
                 VirtualDom::new(SettingsWindow),
                 Config::default().with_window(
@@ -73,26 +79,65 @@ fn app() -> Element {
     // Timer: set SHOW_WINDOW to true every blink_interval seconds
     // Listen for blink interval changes via the broadcast channel
     use_effect(move || {
-        use crate::shared_state::{get_blink_interval, settings_receiver};
-        use futures_util::StreamExt;
-
         spawn(async move {
             use std::time::{Duration, Instant};
             let mut last_trigger = Instant::now();
             let mut interval = get_blink_interval();
 
-            // Get a receiver for settings changes
-            let receiver = settings_receiver();
-            let mut rx = receiver.write().unwrap();
+            // Create a new broadcast receiver for settings changes
+            let mut rx = settings_receiver();
 
             loop {
                 tokio::time::sleep(Duration::from_millis(100)).await;
                 // Check for new settings
-                while let Ok(Some(settings)) = rx.try_next() {
+                while let Ok(settings) = rx.try_recv() {
                     interval = settings.blink_interval;
                 }
                 if last_trigger.elapsed().as_secs() >= interval {
                     *SHOW_WINDOW.write() = true;
+                    last_trigger = Instant::now();
+                }
+            }
+        });
+    });
+
+    // Posture Reminder Timer: triggers posture reminder window every posture_interval seconds
+    use_effect(move || {
+        spawn(async move {
+            use std::time::{Duration, Instant};
+            let mut last_trigger = Instant::now();
+            let mut interval = get_posture_interval();
+            let mut duration = get_posture_duration();
+
+            // Create a new broadcast receiver for settings changes
+            let mut rx = settings_receiver();
+
+            loop {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                // Check for new settings
+                while let Ok(settings) = rx.try_recv() {
+                    interval = settings.posture_interval;
+                    duration = settings.posture_duration;
+                }
+                if last_trigger.elapsed().as_secs() >= interval {
+                    // Open a posture reminder window
+                    window().new_window(
+                        VirtualDom::new_with_props(
+                            ReminderWindow,
+                            ReminderWindowProps {
+                                kind: ReminderType::Posture,
+                            },
+                        ),
+                        Config::default().with_window(
+                            WindowBuilder::new()
+                                .with_title("Posture Reminder")
+                                .with_transparent(true)
+                                .with_always_on_top(true)
+                                .with_decorations(false)
+                                .with_inner_size(LogicalSize::new(240.0, 200.0)),
+                        ),
+                    );
+                    // Wait for the posture duration before closing (handled in ReminderWindow)
                     last_trigger = Instant::now();
                 }
             }
