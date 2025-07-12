@@ -10,7 +10,7 @@ use dioxus::desktop::{trayicon::init_tray_icon, window, WindowCloseBehaviour};
 use dioxus::desktop::{Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
 use dioxus_desktop::muda::{Menu, MenuItem};
-use dioxus_desktop::trayicon::{DioxusTrayIcon, TrayIconBuilder};
+use dioxus_desktop::trayicon::DioxusTrayIcon;
 use dioxus_desktop::use_muda_event_handler;
 use image::io::Reader as ImageReader;
 use image::GenericImageView;
@@ -171,7 +171,7 @@ fn app() -> Element {
                             .with_transparent(true)
                             .with_always_on_top(true)
                             .with_decorations(false)
-                            .with_inner_size(LogicalSize::new(220.0, 180.0)),
+                            .with_inner_size(LogicalSize::new(300.0, 300.0)),
                     ),
                 );
                 *SHOW_WINDOW.write() = false;

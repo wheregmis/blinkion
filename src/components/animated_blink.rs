@@ -42,21 +42,24 @@ pub fn AnimatedBlink() -> Element {
 
         let color_seq = AnimationSequence::new()
             .then(
-                Color::from_rgba(25, 118, 210, 255), // #1976d2
+                Color::from_rgba(25, 118, 210, 255),
                 AnimationConfig::new(AnimationMode::Spring(Spring::default()))
                     .with_loop(LoopMode::Infinite),
             )
             .then(
-                Color::from_rgba(67, 160, 71, 255), // #43a047
-                AnimationConfig::new(AnimationMode::Spring(Spring::default())),
+                Color::from_rgba(67, 160, 71, 255),
+                AnimationConfig::new(AnimationMode::Spring(Spring::default()))
+                    .with_loop(LoopMode::Infinite),
             )
             .then(
-                Color::from_rgba(229, 57, 53, 255), // #e53935
-                AnimationConfig::new(AnimationMode::Spring(Spring::default())),
+                Color::from_rgba(229, 57, 53, 255),
+                AnimationConfig::new(AnimationMode::Spring(Spring::default()))
+                    .with_loop(LoopMode::Infinite),
             )
             .then(
                 Color::from_rgba(25, 118, 210, 255),
-                AnimationConfig::new(AnimationMode::Spring(Spring::default())),
+                AnimationConfig::new(AnimationMode::Spring(Spring::default()))
+                    .with_loop(LoopMode::Infinite),
             );
 
         transform.animate_sequence(transform_seq);
@@ -72,6 +75,7 @@ pub fn AnimatedBlink() -> Element {
     rsx! {
 
     svg {
+        style: "{style}",
         fill: "#000000",
         height: "200px",
         id: "Layer_1",
@@ -105,6 +109,7 @@ pub fn AnimatedBlink() -> Element {
                         cy: "243.512",
                         rx: "21.854",
                         ry: "37.463",
+                        fill: {format!("#{:02x}{:02x}{:02x}", color.get_value().r as u8, color.get_value().g as u8, color.get_value().b as u8)}
                     }
                 }
             }

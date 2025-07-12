@@ -32,15 +32,16 @@ pub fn AnimatedPosture() -> Element {
         transform.animate_sequence(seq);
     });
 
-    // let style = format!(
-    //     "transform: scale({}) rotate({}deg); transition: transform 0.3s cubic-bezier(.4,2,.6,1);",
-    //     transform.get_value().scale,
-    //     transform.get_value().rotation.to_degrees()
-    // );
+    let style = format!(
+        "transform: scale({}) rotate({}deg); transition: transform 0.3s cubic-bezier(.4,2,.6,1); display: block;",
+        transform.get_value().scale,
+        transform.get_value().rotation.to_degrees()
+    );
 
     rsx! {
         document::Link { rel: "stylesheet", href: POSTURE_STYLE }
     svg {
+        style: "{style}",
         class: "posture-svg",
         fill: "#000000",
         view_box: "-38.48 0 315.134 315.134",
