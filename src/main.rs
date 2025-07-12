@@ -10,8 +10,10 @@ use dioxus::desktop::{trayicon::init_tray_icon, window, WindowCloseBehaviour};
 use dioxus::desktop::{Config, LogicalSize, WindowBuilder};
 use dioxus::prelude::*;
 use dioxus_desktop::muda::{Menu, MenuItem};
-use dioxus_desktop::trayicon::DioxusTrayIcon;
+use dioxus_desktop::trayicon::{DioxusTrayIcon, TrayIconBuilder};
 use dioxus_desktop::use_muda_event_handler;
+use image::io::Reader as ImageReader;
+use image::GenericImageView;
 use std::time::Duration;
 
 mod components;
@@ -55,10 +57,15 @@ fn app() -> Element {
     let menu_item_id = menu_item.id().clone();
     let _ = tray_menu.append(&menu_item);
 
-    init_tray_icon(
-        tray_menu,
-        DioxusTrayIcon::from_rgba(include_bytes!(".././assets/icon.rgba").to_vec(), 460, 460).ok(),
-    );
+    // Decode PNG at runtime for tray icon
+    let img = ImageReader::open("assets/tray.png")
+        .expect("icon.png not found")
+        .decode()
+        .expect("decode failed");
+    let (width, height) = img.dimensions();
+    let rgba = img.to_rgba8().into_raw();
+    let icon = DioxusTrayIcon::from_rgba(rgba, width, height).expect("icon parse failed");
+    init_tray_icon(tray_menu, Some(icon));
 
     use_muda_event_handler(move |event| {
         if *event.id() == menu_item_id {
