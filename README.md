@@ -1,3 +1,49 @@
+# Blinkion
+
+Blinkion is a cross-platform desktop app built with [Dioxus](https://dioxuslabs.com/) that helps you maintain healthy screen habits by reminding you to blink and correct your posture at configurable intervals.
+
+## Features
+- **Blink Reminders:** Periodic popups to remind you to blink and rest your eyes.
+- **Posture Reminders:** Timed posture correction prompts with animated SVG illustrations.
+- **Animated SVGs:** Smooth, animated graphics for both blink and posture reminders using `dioxus_motion`.
+- **Tray Icon:** Persistent tray icon for quick access and settings.
+- **Settings Window:** Easily configure blink and posture intervals and durations.
+- **Customizable Styles:** Uses Tailwind CSS and custom SVG/CSS for a polished look.
+
+## Quick Start
+1. **Install Rust** (if you haven't): https://rustup.rs/
+2. **Clone the repo:**
+   ```bash
+   git clone <repo-url>
+   cd blinkion
+   ```
+3. **Run the app:**
+   ```bash
+   cargo run
+   ```
+   Or, for Dioxus desktop hot-reload:
+   ```bash
+   dx serve --platform desktop
+   ```
+4. **Configure settings:**
+   - Click the tray icon and select "Settings" to adjust reminder intervals and durations.
+
+## Project Structure
+
+```
+project/
+├─ assets/         # App assets (SVGs, CSS, icons)
+├─ src/
+│  ├─ main.rs      # App entry point, window/tray logic
+│  ├─ components/  # UI components (AnimatedBlink, AnimatedPosture, etc.)
+│  ├─ reminder.rs  # Reminder logic
+│  ├─ shared_state.rs # Global state and settings
+│  ├─ signals.rs   # Signals for inter-component communication
+├─ Cargo.toml      # Dependencies and features
+```
+
+---
+
 # Development
 
 Your new bare-bones project includes minimal organization with a single `main.rs` file and a few assets.
