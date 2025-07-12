@@ -22,7 +22,7 @@ mod signals;
 use crate::shared_state::{
     get_blink_interval, get_posture_duration, get_posture_interval, settings_receiver,
 };
-use components::reminder_window::{ReminderWindow, ReminderWindowProps};
+use components::reminder_window::{reminder_window, ReminderWindowProps};
 use components::settings_window::SettingsWindow;
 use reminder::ReminderType;
 use signals::SHOW_WINDOW;
@@ -57,7 +57,7 @@ fn app() -> Element {
 
     init_tray_icon(
         tray_menu,
-        DioxusTrayIcon::from_rgba(include_bytes!(".././assets/icon.png").to_vec(), 460, 460).ok(),
+        DioxusTrayIcon::from_rgba(include_bytes!(".././assets/icon.rgba").to_vec(), 460, 460).ok(),
     );
 
     use_muda_event_handler(move |event| {
@@ -120,12 +120,13 @@ fn app() -> Element {
                     duration = settings.posture_duration;
                 }
                 if last_trigger.elapsed().as_secs() >= interval {
-                    // Open a posture reminder window
+                    // Open a posture reminder window, passing duration as a prop
                     window().new_window(
                         VirtualDom::new_with_props(
-                            ReminderWindow,
+                            reminder_window,
                             ReminderWindowProps {
                                 kind: ReminderType::Posture,
+                                duration: Some(duration),
                             },
                         ),
                         Config::default().with_window(
@@ -151,9 +152,10 @@ fn app() -> Element {
             if *SHOW_WINDOW.read() {
                 window().new_window(
                     VirtualDom::new_with_props(
-                        ReminderWindow,
+                        reminder_window,
                         ReminderWindowProps {
                             kind: ReminderType::Blink,
+                            duration: None,
                         },
                     ),
                     Config::default().with_window(

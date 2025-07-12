@@ -34,7 +34,6 @@ pub static SETTINGS_CHANNEL: Lazy<broadcast::Sender<BlinkSettings>> = Lazy::new(
 });
 
 /// Helper functions for reading and writing the shared state.
-
 /// Get the current blink interval.
 pub fn get_blink_interval() -> u64 {
     SHARED_BLINK_SETTINGS.read().unwrap().blink_interval

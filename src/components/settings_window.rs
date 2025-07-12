@@ -9,10 +9,10 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn SettingsWindow() -> Element {
-    let mut local_interval = use_signal(|| get_blink_interval());
-    let mut local_duration = use_signal(|| get_blink_duration());
-    let mut local_posture_interval = use_signal(|| get_posture_interval());
-    let mut local_posture_duration = use_signal(|| get_posture_duration());
+    let mut local_interval = use_signal(get_blink_interval);
+    let mut local_duration = use_signal(get_blink_duration);
+    let mut local_posture_interval = use_signal(get_posture_interval);
+    let mut local_posture_duration = use_signal(get_posture_duration);
 
     rsx! {
         document::Link { rel: "stylesheet", href: STYLE }
